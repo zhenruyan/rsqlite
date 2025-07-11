@@ -1,28 +1,30 @@
-# rqlite Go 驱动
+# rqlite Go Driver
 
-这是一个用Go语言编写的rqlite数据库驱动，完全兼容Go的`database/sql`接口，支持多节点配置、自动选主，并且完全兼容SQLite语法。驱动注册名为`sqlite`，因此各种ORM框架可以无缝使用。
+A Go database driver for rqlite, fully compatible with Go's `database/sql` interface. It supports multi-node configuration, automatic leader discovery, and is fully compatible with SQLite syntax. The driver is registered as `sqlite`, making it seamlessly compatible with various ORM frameworks.
 
-## 特性
+[中文文档](README_zh.md) | English
 
-- ✅ **完全兼容 database/sql 接口** - 可以直接替换SQLite使用
-- ✅ **多节点支持** - 支持配置多个rqlite节点
-- ✅ **自动选主** - 自动发现和连接到集群的leader节点
-- ✅ **故障转移** - 当leader节点不可用时自动切换到其他节点
-- ✅ **ORM兼容** - 与GORM、XORM等ORM框架无缝集成
-- ✅ **连接池支持** - 支持Go标准的数据库连接池
-- ✅ **事务支持** - 支持数据库事务（注意：rqlite的事务是无操作的）
-- ✅ **参数化查询** - 支持预编译语句和参数绑定
-- ✅ **多种一致性级别** - 支持strong、weak、none一致性级别
+## Features
 
-## 安装
+- ✅ **Full database/sql compatibility** - Drop-in replacement for SQLite
+- ✅ **Multi-node support** - Configure multiple rqlite nodes
+- ✅ **Automatic leader discovery** - Automatically discover and connect to cluster leader
+- ✅ **Fault tolerance** - Automatic failover when leader becomes unavailable
+- ✅ **ORM compatibility** - Seamless integration with GORM, XORM, and other ORM frameworks
+- ✅ **Connection pooling** - Support for Go's standard database connection pool
+- ✅ **Transaction support** - Database transaction support (note: rqlite transactions are no-ops)
+- ✅ **Parameterized queries** - Support for prepared statements and parameter binding
+- ✅ **Multiple consistency levels** - Support for strong, weak, and none consistency levels
+
+## Installation
 
 ```bash
-go get github.com/free/rsqlite
+go get github.com/zhenruyan/rsqlite
 ```
 
-## 快速开始
+## Quick Start
 
-### 基本使用
+### Basic Usage
 
 ```go
 package main
@@ -32,23 +34,23 @@ import (
     "fmt"
     "log"
     
-    _ "github.com/free/rsqlite" // 导入驱动
+    _ "github.com/zhenruyan/rsqlite" // Import driver
 )
 
 func main() {
-    // 连接到rqlite集群
+    // Connect to rqlite cluster
     db, err := sql.Open("sqlite", "localhost:4001,localhost:4002,localhost:4003")
     if err != nil {
         log.Fatal(err)
     }
     defer db.Close()
 
-    // 测试连接
+    // Test connection
     if err := db.Ping(); err != nil {
         log.Fatal(err)
     }
 
-    // 创建表
+    // Create table
     _, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
@@ -58,18 +60,18 @@ func main() {
         log.Fatal(err)
     }
 
-    // 插入数据
+    // Insert data
     result, err := db.Exec("INSERT INTO users (name, email) VALUES (?, ?)", 
-        "张三", "zhangsan@example.com")
+        "John Doe", "john@example.com")
     if err != nil {
         log.Fatal(err)
     }
 
     id, _ := result.LastInsertId()
-    fmt.Printf("插入用户ID: %d\n", id)
+    fmt.Printf("Inserted user ID: %d\n", id)
 
-    // 查询数据
-    rows, err := db.Query("SELECT id, name, email FROM users WHERE name = ?", "张三")
+    // Query data
+    rows, err := db.Query("SELECT id, name, email FROM users WHERE name = ?", "John Doe")
     if err != nil {
         log.Fatal(err)
     }
@@ -81,19 +83,19 @@ func main() {
         if err := rows.Scan(&id, &name, &email); err != nil {
             log.Fatal(err)
         }
-        fmt.Printf("用户: ID=%d, 姓名=%s, 邮箱=%s\n", id, name, email)
+        fmt.Printf("User: ID=%d, Name=%s, Email=%s\n", id, name, email)
     }
 }
 ```
 
-### 使用认证和配置
+### Using Authentication and Configuration
 
 ```go
-// 使用用户名密码认证，设置一致性级别和超时
+// Use username/password authentication, set consistency level and timeout
 db, err := sql.Open("sqlite", "user:password@host1:4001,host2:4002?consistency=strong&timeout=30s")
 ```
 
-### 与GORM集成
+### GORM Integration
 
 ```go
 package main
@@ -101,7 +103,7 @@ package main
 import (
     "gorm.io/driver/sqlite"
     "gorm.io/gorm"
-    _ "github.com/free/rsqlite"
+    _ "github.com/zhenruyan/rsqlite"
 )
 
 type User struct {
@@ -111,134 +113,134 @@ type User struct {
 }
 
 func main() {
-    // GORM会自动使用我们的rqlite驱动
+    // GORM will automatically use our rqlite driver
     db, err := gorm.Open(sqlite.Open("localhost:4001,localhost:4002,localhost:4003"), &gorm.Config{})
     if err != nil {
         panic("failed to connect database")
     }
 
-    // 自动迁移
+    // Auto migrate
     db.AutoMigrate(&User{})
 
-    // 创建
-    db.Create(&User{Name: "李四", Email: "lisi@example.com"})
+    // Create
+    db.Create(&User{Name: "Jane Smith", Email: "jane@example.com"})
 
-    // 查询
+    // Query
     var user User
-    db.First(&user, "name = ?", "李四")
+    db.First(&user, "name = ?", "Jane Smith")
 }
 ```
 
-## DSN (数据源名称) 格式
+## DSN (Data Source Name) Format
 
 ```
 [username:password@]host1:port1[,host2:port2,...][?param1=value1&param2=value2]
 ```
 
-### 参数说明
+### Parameters
 
-- `username:password` - 可选的认证信息
-- `host:port` - rqlite节点地址，支持多个节点用逗号分隔
-- `consistency` - 一致性级别：`strong`、`weak`（默认）、`none`
-- `timeout` - 连接超时时间，如：`30s`、`1m`
+- `username:password` - Optional authentication credentials
+- `host:port` - rqlite node addresses, multiple nodes separated by commas
+- `consistency` - Consistency level: `strong`, `weak` (default), `none`
+- `timeout` - Connection timeout, e.g., `30s`, `1m`
 
-### DSN 示例
+### DSN Examples
 
 ```go
-// 单节点，默认配置
+// Single node, default configuration
 "localhost:4001"
 
-// 多节点集群
+// Multi-node cluster
 "node1:4001,node2:4001,node3:4001"
 
-// 使用认证
+// With authentication
 "admin:password@localhost:4001"
 
-// 强一致性，60秒超时
+// Strong consistency, 60 second timeout
 "localhost:4001?consistency=strong&timeout=60s"
 
-// 完整配置
+// Full configuration
 "user:pass@node1:4001,node2:4001,node3:4001?consistency=strong&timeout=30s"
 ```
 
-## 一致性级别
+## Consistency Levels
 
-rqlite支持三种一致性级别：
+rqlite supports three consistency levels:
 
-- **strong**: 强一致性，读写都通过leader节点，保证线性一致性
-- **weak**: 弱一致性（默认），写通过leader，读可能有延迟
-- **none**: 无一致性保证，读写都可能不是最新数据，但性能最好
+- **strong**: Strong consistency, all reads and writes go through leader node, guarantees linearizability
+- **weak**: Weak consistency (default), writes go through leader, reads may have slight delay
+- **none**: No consistency guarantee, reads and writes may not reflect latest data, but best performance
 
-## 故障处理
+## Fault Handling
 
-驱动会自动处理以下故障情况：
+The driver automatically handles the following fault scenarios:
 
-1. **Leader选举** - 自动发现新的leader节点
-2. **节点故障** - 自动重试其他可用节点
-3. **网络分区** - 在网络恢复后自动重连
-4. **连接超时** - 支持配置连接和查询超时
+1. **Leader election** - Automatically discover new leader nodes
+2. **Node failures** - Automatically retry with other available nodes
+3. **Network partitions** - Automatically reconnect after network recovery
+4. **Connection timeouts** - Support for configurable connection and query timeouts
 
-## 限制和注意事项
+## Limitations and Notes
 
-1. **事务支持**: rqlite不支持传统的ACID事务，`Begin()`、`Commit()`、`Rollback()`是无操作的
-2. **并发写入**: 只有leader节点可以处理写入操作
-3. **SQL兼容性**: 支持SQLite的SQL语法，但某些高级特性可能不可用
-4. **连接管理**: 建议使用连接池来管理数据库连接
+1. **Transaction support**: rqlite doesn't support traditional ACID transactions, `Begin()`, `Commit()`, `Rollback()` are no-ops
+2. **Concurrent writes**: Only the leader node can handle write operations
+3. **SQL compatibility**: Supports SQLite SQL syntax, but some advanced features may not be available
+4. **Connection management**: Recommended to use connection pooling for database connections
 
-## 性能建议
+## Performance Recommendations
 
-1. **使用连接池**: 通过`SetMaxOpenConns()`和`SetMaxIdleConns()`配置连接池
-2. **批量操作**: 使用事务将多个操作组合在一起
-3. **合适的一致性级别**: 根据业务需求选择合适的一致性级别
-4. **预编译语句**: 对于重复执行的查询使用`Prepare()`
+1. **Use connection pooling**: Configure connection pool via `SetMaxOpenConns()` and `SetMaxIdleConns()`
+2. **Batch operations**: Use transactions to group multiple operations together
+3. **Appropriate consistency level**: Choose the right consistency level based on business requirements
+4. **Prepared statements**: Use `Prepare()` for repeatedly executed queries
 
 ```go
-// 配置连接池
+// Configure connection pool
 db.SetMaxOpenConns(25)
 db.SetMaxIdleConns(5)
 db.SetConnMaxLifetime(5 * time.Minute)
 
-// 使用预编译语句
-stmt, err := db.Prepare("INSERT INTO users (name, email) VALUES (?, ?)")
+// Batch insert example
+tx, err := db.Begin()
 if err != nil {
     log.Fatal(err)
 }
-defer stmt.Close()
 
-for i := 0; i < 100; i++ {
-    _, err = stmt.Exec(fmt.Sprintf("user%d", i), fmt.Sprintf("user%d@example.com", i))
+for i := 0; i < 1000; i++ {
+    _, err = tx.Exec("INSERT INTO users (name, email) VALUES (?, ?)", 
+        fmt.Sprintf("User%d", i), fmt.Sprintf("user%d@example.com", i))
     if err != nil {
+        tx.Rollback()
         log.Fatal(err)
     }
 }
+
+if err := tx.Commit(); err != nil {
+    log.Fatal(err)
+}
 ```
 
-## 测试
+## Examples and Testing
+
+The project includes complete example code and test cases:
 
 ```bash
-# 运行测试
-go test ./...
+# Run tests
+go test -v .
 
-# 运行基准测试
-go test -bench=.
-
-# 查看测试覆盖率
-go test -cover
+# Run examples
+cd examples && go run basic_usage.go
 ```
 
-## 示例程序
+## Contributing
 
-查看`example_test.go`文件获取更多使用示例。
+Contributions are welcome! Please ensure:
 
-## 贡献
+1. Code passes all tests
+2. Follow Go coding conventions
+3. Add appropriate test cases
+4. Update relevant documentation
 
-欢迎提交Issue和Pull Request！
+## License
 
-## 许可证
-
-MIT License
-
-## 相关项目
-
-- [rqlite](https://github.com/rqlite/rqlite) - 基于SQLite的分布式关系数据库
-- [gorqlite](https://github.com/rqlite/gorqlite) - rqlite的官方Go客户端库 
+This project is licensed under the MIT License. See the LICENSE file for details. 

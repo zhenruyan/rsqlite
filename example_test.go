@@ -226,7 +226,7 @@ func BenchmarkQuery(b *testing.B) {
 func TestClusterFailover(t *testing.T) {
 	// 测试集群故障转移
 	// 这个测试需要实际的rqlite集群才能运行
-	t.Error("需要实际的rqlite集群环境")
+	t.Skip("需要实际的rqlite集群环境")
 
 	db, err := sql.Open("sqlite", "10.0.1.2:4000")
 	if err != nil {

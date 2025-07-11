@@ -1,4 +1,4 @@
-module github.com/free/rsqlite/examples
+module github.com/zhenruyan/rsqlite/examples
 
 go 1.21
 
