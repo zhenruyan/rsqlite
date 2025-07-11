@@ -55,17 +55,28 @@ func (r *Rows) Next(dest []driver.Value) error {
 		return io.EOF
 	}
 
-	// Create temporary slice to hold scanned values
-	values := make([]interface{}, len(dest))
-
-	// Scan the current row into our temporary slice
-	if err := r.result.Scan(values...); err != nil {
+	// Use gorqlite's Map() method to get the current row as a map
+	// This avoids the type scanning issues
+	rowMap, err := r.result.Map()
+	if err != nil {
 		return err
 	}
 
-	// Convert each value to driver.Value
-	for i, val := range values {
-		dest[i] = convertValue(val)
+	// Get column names to maintain order
+	columns := r.result.Columns()
+
+	// Fill dest slice with values in column order
+	for i, colName := range columns {
+		if i >= len(dest) {
+			break
+		}
+
+		val, exists := rowMap[colName]
+		if !exists {
+			dest[i] = nil
+		} else {
+			dest[i] = convertValue(val)
+		}
 	}
 
 	return nil
